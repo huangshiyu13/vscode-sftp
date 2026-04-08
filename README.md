@@ -1,100 +1,126 @@
 # SFTP Uploader
 
+English | [简体中文](README_zh.md)
+
 SFTP Uploader is a maintained VS Code extension for uploading, downloading, diffing, and syncing local folders with remote FTP and SFTP servers.
 
-It is based on the MIT-licensed `vscode-sftp` codebase and focuses on keeping the workflow practical for day-to-day development, including better support for modern SSH setups that rely on OpenSSH `ProxyJump` / bastion hosts.
+It is based on the MIT-licensed `vscode-sftp` codebase and keeps the familiar workflow that many teams already rely on, while improving compatibility with modern OpenSSH setups such as `ProxyJump`, bastion hosts, and SSH aliases defined in `~/.ssh/config`.
 
 - Repository: https://github.com/huangshiyu13/vscode-sftp
 - Issues: https://github.com/huangshiyu13/vscode-sftp/issues
 - License: MIT
 
-Core features:
-- [Remote Explorer](#remote-explorer)
-- Diff local and remote files
-- Sync directories in either direction
-- Upload and download individual files or folders
+## Why this fork
+
+This fork exists to keep the extension practical for real development environments:
+
+- Better support for OpenSSH-based workflows
+- Improved compatibility with bastion and `ProxyJump` setups
+- Familiar `sftp.*` commands and `.vscode/sftp.json` configuration
+- The same day-to-day features people expect from the original extension
+
+## Highlights
+
 - Upload on save
-- File watcher support
+- Upload and download individual files or folders
+- Sync directories in either direction
+- Diff local and remote files
+- Remote Explorer integration
 - Multiple configurations and profiles
 - FTP and SFTP support
-- Improved SSH config and `ProxyJump` handling
-- [Debugging](#debug)
-- Frequently asked questions in the repository FAQ file
+- Better OpenSSH config and `ProxyJump` handling
+- Debug logging for connection troubleshooting
+
+## What is improved in this fork
+
+- Resolve SSH aliases from `sshConfigPath`
+- Preserve `ProxyJump` after `HostName` resolution
+- Connect intermediate bastion hosts as raw SSH hops instead of incorrectly trying to open SFTP on every hop
+- Keep `uploadOnSave`, manual upload, and Remote Explorer working with bastion-based access
 
 ## Installation
 
 ### Marketplace
+
 1. Open the Extensions view in VS Code.
 2. Search for `SFTP Uploader`.
 3. Install the extension published by `huangshiyu`.
 4. Reload VS Code if prompted.
 
 ### VSIX
+
 1. Open the Extensions view in VS Code.
 2. Open the Extensions view menu and select `Install from VSIX...`.
 3. Pick the generated `.vsix` file.
 4. Reload VS Code.
 
-If you already have another `vscode-sftp` fork installed, uninstall or disable it first. This fork keeps the familiar `sftp.*` command namespace, so running two variants side by side can lead to duplicate commands or confusing behavior.
+If you already have another `vscode-sftp` fork installed, uninstall or disable it first. This fork keeps the familiar `sftp.*` command namespace, so running multiple variants side by side can lead to duplicate commands or confusing behavior.
 
-## Usage
-If the latest files are already on a remote server, you can start with an empty local folder,
-then download your project, and from that point sync.
+## Quick Start
 
-1. In `VS Code`, open a local directory you wish to sync to the remote server (or create an empty directory
-that you wish to first download the contents of a remote server folder in order to edit locally).
-2. `Ctrl+Shift+P` on Windows/Linux or `Cmd+Shift+P` on Mac open command palette, run `SFTP: config` command.
-3. A basic configuration file will appear named `sftp.json` under the `.vscode` directory, open and edit the configuration parameters with your remote server information.
+1. Open the local folder you want to sync.
+2. Run `SFTP: Config` from the Command Palette.
+3. Edit `.vscode/sftp.json`.
+4. Save the file.
+5. Run `SFTP: Download Project`, `SFTP: Upload Project`, or simply enable `uploadOnSave`.
 
-For instance:
+Basic example:
+
 ```json
 {
-    "name": "Profile Name",
-    "host": "name_of_remote_host",
-    "protocol": "ftp",
-    "port": 21,
-    "secure": true,
-    "username": "username",
-    "remotePath": "/public_html/project", // <--- This is the path which will be downloaded if you "Download Project"
-    "password": "password",
-    "uploadOnSave": false
+  "name": "my-server",
+  "protocol": "sftp",
+  "host": "example-host",
+  "username": "deploy",
+  "remotePath": "/var/www/project",
+  "uploadOnSave": true
 }
 ```
-The password parameter in `sftp.json` is optional, if left out you will be prompted for a password on sync.
-_Note：_ backslashes and other special characters must be escaped with a backslash.
 
-4. Save and close the `sftp.json` file.
-5. `Ctrl+Shift+P` on Windows/Linux or `Cmd+Shift+P` on Mac open command palette.
-6. Type `sftp` and you'll now see a number of other commands. You can also access many of the commands from the project's file explorer context menus.
-7. A good one to start with if you want to sync with a remote folder is `SFTP: Download Project`.  This will download the directory shown in the `remotePath` setting in `sftp.json` to your local open directory.
-8. Done - you can now edit locally and after each save it will upload to sync your remote file with the local copy.
-9. Enjoy!
+The `password` field is optional. If omitted, the extension prompts when needed.
 
-For common workflows and configuration patterns, continue with the examples below and check the repository FAQ if you run into edge cases.
+## Recommended SSH Setup: OpenSSH Alias + ProxyJump
 
-## Example configurations
-This section covers the most common configuration layouts used in practice.
+For bastion-based environments, the recommended setup is to keep connection logic in `~/.ssh/config` and point the extension at the alias.
 
-- [SFTP Uploader](#sftp-uploader)
-  - [Installation](#installation)
-    - [Marketplace](#marketplace)
-    - [VSIX](#vsix)
-  - [Usage](#usage)
-  - [Example configurations](#example-configurations)
-    - [Simple](#simple)
-    - [Profiles](#profiles)
-    - [Multiple Context](#multiple-context)
-    - [Connection Hopping](#connection-hopping)
-      - [Single Hop](#single-hop)
-      - [Multiple Hop](#multiple-hop)
-    - [Configuration in User Setting](#configuration-in-user-setting)
-  - [Remote Explorer](#remote-explorer)
-    - [Multiple Select](#multiple-select)
-    - [Order](#order)
-  - [Debug](#debug)
-  - [FAQ](#faq)
+`~/.ssh/config`
+
+```sshconfig
+Host jump-host
+    HostName bastion.example.com
+    User deploy
+    IdentityFile ~/.ssh/id_ed25519
+
+Host target-alias
+    HostName target.internal.example.com
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    ProxyJump jump-host
+```
+
+`.vscode/sftp.json`
+
+```json
+{
+  "name": "target-alias",
+  "protocol": "sftp",
+  "host": "target-alias",
+  "username": "root",
+  "privateKeyPath": "/Users/yourname/.ssh/id_ed25519",
+  "sshConfigPath": "~/.ssh/config",
+  "remotePath": "/workspace/project",
+  "uploadOnSave": true,
+  "useTempFile": false,
+  "ignore": [".git", ".vscode", "__pycache__", "*.pyc", "*.log"]
+}
+```
+
+This is the main workflow this fork improves: keep SSH routing in OpenSSH, keep file sync inside VS Code.
+
+## Additional Configuration Examples
 
 ### Simple
+
 ```json
 {
   "host": "host",
@@ -104,6 +130,7 @@ This section covers the most common configuration layouts used in practice.
 ```
 
 ### Profiles
+
 ```json
 {
   "username": "username",
@@ -129,12 +156,14 @@ This section covers the most common configuration layouts used in practice.
 }
 ```
 
-_Note：_ `context` and `watcher` are only available at root level.
+`context` and `watcher` are only available at root level.
 
 Use `SFTP: Set Profile` to switch profile.
 
-### Multiple Context
-The context must **not be same**.
+### Multiple Contexts
+
+The `context` values must be unique.
+
 ```json
 [
   {
@@ -156,68 +185,63 @@ The context must **not be same**.
 ]
 ```
 
-_Note：_ `name` is required in this mode.
+`name` is required in this mode.
 
-### Connection Hopping
-You can connect to a target server through a proxy with ssh protocol.
+### Legacy Hop Configuration
 
-_Note：_ Variable substitution is not working in a hop configuration.
+The original `hop` configuration style is still supported. For new setups, using `sshConfigPath` with OpenSSH aliases is usually easier to maintain.
 
 #### Single Hop
+
 local -> hop -> target
+
 ```json
 {
   "name": "target",
   "remotePath": "/path/in/target",
-
-  // hop
   "host": "hopHost",
   "username": "hopUsername",
-  "privateKeyPath": "/Users/localUser/.ssh/id_rsa", // <-- The key file is assumed on the local.
-
+  "privateKeyPath": "/Users/localUser/.ssh/id_rsa",
   "hop": {
-    // target
     "host": "targetHost",
     "username": "targetUsername",
-    "privateKeyPath": "/Users/hopUser/.ssh/id_rsa", // <-- The key file is assumed on the hop.
+    "privateKeyPath": "/Users/hopUser/.ssh/id_rsa"
   }
 }
 ```
 
 #### Multiple Hop
+
 local -> hopa -> hopb -> target
+
 ```json
 {
   "name": "target",
   "remotePath": "/path/in/target",
-
-  // hopa
   "host": "hopAHost",
   "username": "hopAUsername",
-  "privateKeyPath": "/Users/hopAUsername/.ssh/id_rsa" // <-- The key file is assumed on the local.
-
+  "privateKeyPath": "/Users/hopAUsername/.ssh/id_rsa",
   "hop": [
-    // hopb
     {
       "host": "hopBHost",
       "username": "hopBUsername",
-      "privateKeyPath": "/Users/hopaUser/.ssh/id_rsa" // <-- The key file is assumed on the hopa.
+      "privateKeyPath": "/Users/hopaUser/.ssh/id_rsa"
     },
-
-    // target
     {
       "host": "targetHost",
       "username": "targetUsername",
-      "privateKeyPath": "/Users/hopbUser/.ssh/id_rsa", // <-- The key file is assumed on the hopb.
+      "privateKeyPath": "/Users/hopbUser/.ssh/id_rsa"
     }
   ]
 }
 ```
 
-### Configuration in User Setting
-You can use `remote` to tell sftp to get the configuration from [remote-fs](https://github.com/liximomo/vscode-remote-fs).
+### Configuration in User Settings
 
-In User Setting:
+You can use `remote` to tell SFTP Uploader to read a connection from [remote-fs](https://github.com/liximomo/vscode-remote-fs).
+
+In user settings:
+
 ```json
 "remotefs.remote": {
   "dev": {
@@ -236,7 +260,8 @@ In User Setting:
 }
 ```
 
-In sftp.json:
+In `sftp.json`:
+
 ```json
 {
   "remote": "dev",
@@ -247,36 +272,44 @@ In sftp.json:
 ```
 
 ## Remote Explorer
-Remote Explorer lets you explore files in remote. You can open Remote Explorer by:
 
-1. Run Command `View: Show SFTP`.
-2. Click SFTP view in Activity Bar.
+Remote Explorer lets you browse files on the remote server.
 
-You can only view a files content with Remote Explorer. Run command `SFTP: Edit in Local` to edit it in local.
+1. Run `View: Show SFTP`.
+2. Or click the SFTP view in the Activity Bar.
+
+You can view remote file content directly. To make local edits, run `SFTP: Edit in Local`.
 
 ### Multiple Select
-You are able to select multiple files/folders at once on the remote server to download and upload. You can do it simply by holding down Ctrl or Shift while selecting all desired files, just like on the regular explorer view.
 
-_Note：_ You need to manually refresh the parent folder after you **delete** a file if the explorer isn't correctly updated.
+You can select multiple files or folders at once in Remote Explorer by holding `Ctrl` or `Shift`, similar to the local explorer.
+
+You may need to manually refresh the parent folder after deleting a file if the explorer does not update immediately.
 
 ### Order
-You can order the remote Explorer by adding the `remoteExplorer.order` parameter inside your `sftp.json` config file.
 
-In sftp.json:
+You can order the Remote Explorer by adding `remoteExplorer.order` to `sftp.json`.
+
 ```json
 {
   "remoteExplorer": {
-    "order": 1 // <-- Default value is 0.
+    "order": 1
   }
 }
 ```
 
-## Debug
-1. Open User Settings.
-  - On Windows/Linux - `File > Preferences > Settings`
-  - On macOS - `Code > Preferences > Settings`
-2. Set `sftp.debug` to `true` and reload vscode.
-3. View the logs in `View > Output > sftp`.
+The default value is `0`.
 
-## FAQ
-See `FAQ.md` in the repository for troubleshooting notes and known edge cases.
+## Debug
+
+1. Open user settings.
+2. Set `sftp.debug` to `true`.
+3. Reload VS Code.
+4. View logs in `View > Output > sftp`.
+
+## Resources
+
+- FAQ: [FAQ.md](FAQ.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Support: [SUPPORT.md](SUPPORT.md)
+- Publishing guide: [PUBLISHING.md](PUBLISHING.md)
