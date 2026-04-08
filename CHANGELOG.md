@@ -1,3 +1,12 @@
+## 0.1.1 - 2026-04-08
+* Added CI guardrails for lint, compile, unit tests, and coverage reporting.
+* Added Codecov integration and repository coverage rules.
+* Expanded automated test coverage to more than 50% statements and lines.
+* Improved `Upload Changed Files` behavior around ignored files and SCM workflows.
+* Reloaded SFTP config automatically when `.vscode/sftp.json` changes outside the editor.
+* Masked nested sensitive fields in hop and `proxyJump` configuration logging.
+* Hardened several transfer, watcher, and command edge cases with regression tests.
+
 ## 0.1.0 - 2026-04-08
 * Forked and republished as `huangshiyu.sftp-uploader`.
 * Added improved OpenSSH `ProxyJump` support for bastion-host workflows.

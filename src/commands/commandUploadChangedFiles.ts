@@ -70,7 +70,13 @@ async function handleCommand(hint: any) {
   const renames: Change[] = [];
   const deletes: Change[] = [];
   for (const change of changes) {
-    if (!getFileService(change.uri)) {
+    const fileService = getFileService(change.uri);
+    if (!fileService) {
+      continue;
+    }
+
+    const config = fileService.getConfig();
+    if (config.ignore && config.ignore(change.uri.fsPath)) {
       continue;
     }
 
@@ -95,25 +101,23 @@ async function handleCommand(hint: any) {
     }
   }
 
-  await Promise.all(creates.concat(uploads).map(change => {
+  await Promise.all(creates.concat(uploads).map(async change => {
     try {
-      uploadFile(change.uri)
+      await uploadFile(change.uri);
     } catch (e) {
       logger.error('Upload failed.', e);
     }
   }));
-  await Promise.all(
-    renames.map(change => {
-      try {
-        renameRemote(change.originalUri, { originPath: change.renameUri!.fsPath });
-      } catch (e) {
-        logger.error('Rename failed.', e);
-      }
-    })
-  );
-  await Promise.all(deletes.map(change => {
+  await Promise.all(renames.map(async change => {
     try {
-      removeRemote(change.uri)
+      await renameRemote(change.originalUri, { originPath: change.renameUri!.fsPath });
+    } catch (e) {
+      logger.error('Rename failed.', e);
+    }
+  }));
+  await Promise.all(deletes.map(async change => {
+    try {
+      await removeRemote(change.uri);
     } catch (e) {
       logger.error('Deletion failed.', e);
     }

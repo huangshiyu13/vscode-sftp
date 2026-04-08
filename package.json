@@ -2,7 +2,7 @@
   "name": "sftp-uploader",
   "displayName": "SFTP Uploader",
   "description": "Upload, download, diff, and sync local files to FTP and SFTP servers from VS Code, with Remote Explorer, upload-on-save, and improved SSH ProxyJump support.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "huangshiyu",
   "author": "huangshiyu",
   "engines": {
@@ -703,6 +703,11 @@
     "compile": "webpack --mode production",
     "dev": "webpack --mode development --watch",
     "test": "jest",
+    "test:unit": "jest --runInBand",
+    "test:coverage": "jest --coverage --runInBand --ci",
+    "lint": "tslint -p tsconfig.json -c tslint.json",
+    "lint:fix": "tslint -p tsconfig.json -c tslint.json --fix",
+    "verify": "npm run lint && npm run compile && npm run test:coverage",
     "package": "npx @vscode/vsce package",
     "publish:marketplace": "npx @vscode/vsce publish",
     "publish:patch": "npx @vscode/vsce publish patch",
@@ -760,6 +765,22 @@
     "testMatch": [
       "<rootDir>/test/**/*.spec.js",
       "<rootDir>/**/*/__tests__/*.ts"
+    ],
+    "collectCoverageFrom": [
+      "<rootDir>/src/**/*.ts",
+      "!<rootDir>/src/**/*.d.ts",
+      "!<rootDir>/src/**/__tests__/*.ts"
+    ],
+    "coverageDirectory": "<rootDir>/coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "cobertura"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/",
+      "/__tests__/"
     ]
   }
 }

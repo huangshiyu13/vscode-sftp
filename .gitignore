@@ -6,9 +6,11 @@ test/test.js
 _debug
 TODO.md
 INSTALL_DEBUG.md
+coverage
 
 ### Extensions ###
 sftp-*.vsix
+*.vsix
 
 ### VS Code ###
 .vscode/**

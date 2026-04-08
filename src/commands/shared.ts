@@ -125,7 +125,7 @@ export function uriFromExplorerContextOrEditorContext(item, items): undefined | 
     } else {
       return item;
     }
-  } else if ((item as ExplorerItem).resource) {
+  } else if (item && (item as ExplorerItem).resource) {
     // from remote explorer
     if (Array.isArray(items) && (items[0] as ExplorerItem).resource) {
       // multi-select in remote explorer

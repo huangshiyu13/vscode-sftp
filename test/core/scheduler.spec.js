@@ -18,6 +18,7 @@ const delay = millisecends =>
       resolve();
     }, millisecends);
   });
+const pending = () => new Promise(() => undefined);
 const fixture = Symbol('fixture');
 
 const wrapTask = fn => ({
@@ -165,10 +166,10 @@ describe('scheduler', () => {
   test('autoStart: false', () => {
     const queue = new Scheduler({ concurrency: 2, autoStart: false });
 
-    queue.add(wrapTask(() => delay(20000)));
-    queue.add(wrapTask(() => delay(20000)));
-    queue.add(wrapTask(() => delay(20000)));
-    queue.add(wrapTask(() => delay(20000)));
+    queue.add(wrapTask(() => pending()));
+    queue.add(wrapTask(() => pending()));
+    queue.add(wrapTask(() => pending()));
+    queue.add(wrapTask(() => pending()));
     expect(queue.size).toEqual(4);
     expect(queue.pendingCount).toEqual(0);
     expect(queue.isRunning).toEqual(false);
@@ -183,11 +184,11 @@ describe('scheduler', () => {
     const queue = new Scheduler({ concurrency: 2 });
 
     queue.pause();
-    queue.add(wrapTask(() => delay(20000)));
-    queue.add(wrapTask(() => delay(20000)));
-    queue.add(wrapTask(() => delay(20000)));
-    queue.add(wrapTask(() => delay(20000)));
-    queue.add(wrapTask(() => delay(20000)));
+    queue.add(wrapTask(() => pending()));
+    queue.add(wrapTask(() => pending()));
+    queue.add(wrapTask(() => pending()));
+    queue.add(wrapTask(() => pending()));
+    queue.add(wrapTask(() => pending()));
     expect(queue.size).toEqual(5);
     expect(queue.pendingCount).toEqual(0);
     expect(queue.isRunning).toEqual(false);
@@ -197,7 +198,7 @@ describe('scheduler', () => {
     expect(queue.pendingCount).toEqual(2);
     expect(queue.isRunning).toEqual(true);
 
-    queue.add(wrapTask(() => delay(20000)));
+    queue.add(wrapTask(() => pending()));
     queue.pause();
     expect(queue.size).toEqual(4);
     expect(queue.pendingCount).toEqual(2);

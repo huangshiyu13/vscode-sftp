@@ -15,8 +15,8 @@ declare global {
 }
 
 Array.prototype.formatSep = function() {
-  return this.map(str => str.replace(/\//g, path.sep))
-}
+  return this.map(str => str.replace(/\//g, path.sep));
+};
 
 function createRemoteFs({ remoteTimeOffsetInHours = 0 } = {}) {
   return new RemoteFs(path, {
@@ -31,6 +31,7 @@ async function runTasks(tasks: TransferTask[]) {
       try {
         await task.run();
       } catch (error) {
+        // tslint:disable-next-line:no-console
         console.log('run task fail', error);
       }
     })

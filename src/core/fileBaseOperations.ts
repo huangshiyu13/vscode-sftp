@@ -59,12 +59,12 @@ export async function createFile(path: string, fs: FileSystem, option): Promise<
     window.showErrorMessage(`Can't create file becase file already exist`);
     return;
   } catch (error) {
-
+    // File does not exist yet, continue with creation.
   }
 
   const targetFd = await fs.open(path, 'w');
   const s = new Readable();
-  s._read = () => { };
+  s._read = () => undefined;
   s.push(null);
   return fs.put(s, path, { fd: targetFd });
 }

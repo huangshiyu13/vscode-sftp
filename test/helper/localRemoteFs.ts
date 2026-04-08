@@ -6,6 +6,8 @@ import RemoteFileSystem from '../../src/core/fs/remoteFileSystem';
 
 // @ts-ignore
 export default class LocalRemoteFileSystem extends RemoteFileSystem {
+  private readonly _fdToPath: Map<number, string> = new Map();
+
   _createClient() {
     return {};
   }
@@ -20,20 +22,50 @@ export default class LocalRemoteFileSystem extends RemoteFileSystem {
     };
   }
 
-  futimes(fd: number, atime: number, mtime: number): Promise<void> {
-    return fse.futimes(
-      fd,
-      this.toRemoteTimeInSecnonds(atime),
-      this.toRemoteTimeInSecnonds(mtime)
-    );
+  async open(path: string, flags: string, mode?: number): Promise<number> {
+    const fd = await fse.open(path, flags, mode);
+    this._fdToPath.set(fd, path);
+    return fd;
+  }
+
+  async futimes(fd: number, atime: number, mtime: number): Promise<void> {
+    const remoteAtime = this.toRemoteTimeInSecnonds(atime);
+    const remoteMtime = this.toRemoteTimeInSecnonds(mtime);
+
+    try {
+      await fse.futimes(fd, remoteAtime, remoteMtime);
+    } catch (error) {
+      if (error && error.code === 'EBADF') {
+        const path = this._fdToPath.get(fd);
+        if (!path) {
+          throw error;
+        }
+
+        await fse.utimes(path, remoteAtime, remoteMtime);
+        return;
+      }
+
+      throw error;
+    }
+  }
+
+  async close(fd: number): Promise<void> {
+    this._fdToPath.delete(fd);
+    try {
+      await fse.close(fd);
+    } catch (error) {
+      if (error && error.code === 'EBADF') {
+        return;
+      }
+
+      throw error;
+    }
   }
 }
 
 [
   'toFileEntry',
   'readFile',
-  'open',
-  'close',
   'fstat',
   'get',
   'put',

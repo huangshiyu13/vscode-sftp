@@ -3,6 +3,7 @@ import logger from '../logger';
 import { realpathSync } from 'fs';
 import app from '../app';
 import StatusBarItem from '../ui/statusBarItem';
+import { CONFIG_PATH } from '../constants';
 import { onDidOpenTextDocument, onDidSaveTextDocument, showConfirmMessage } from '../host';
 import { readConfigsFromFile } from './config';
 import {
@@ -15,6 +16,7 @@ import { reportError, isValidFile, isConfigFile, isInWorkspace } from '../helper
 import { downloadFile, uploadFile } from '../fileHandlers';
 
 let workspaceWatcher: vscode.Disposable;
+let configFileWatcher: vscode.FileSystemWatcher;
 
 async function handleConfigSave(uri: vscode.Uri) {
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
@@ -92,6 +94,9 @@ function watchWorkspace({
   if (workspaceWatcher) {
     workspaceWatcher.dispose();
   }
+  if (configFileWatcher) {
+    configFileWatcher.dispose();
+  }
 
   workspaceWatcher = onDidSaveTextDocument((doc: vscode.TextDocument) => {
     const uri = doc.uri;
@@ -110,6 +115,25 @@ function watchWorkspace({
     }
 
     onDidSaveFile(uri);
+  });
+
+  configFileWatcher = vscode.workspace.createFileSystemWatcher(
+    `**/${CONFIG_PATH}`,
+    false,
+    false,
+    true
+  );
+  configFileWatcher.onDidChange(uri => {
+    if (isConfigFile(uri)) {
+      logger.info(`[config-change] ${uri.fsPath}`);
+      onDidSaveSftpConfig(uri);
+    }
+  });
+  configFileWatcher.onDidCreate(uri => {
+    if (isConfigFile(uri)) {
+      logger.info(`[config-create] ${uri.fsPath}`);
+      onDidSaveSftpConfig(uri);
+    }
   });
 }
 
@@ -131,6 +155,9 @@ function init() {
 function destory() {
   if (workspaceWatcher) {
     workspaceWatcher.dispose();
+  }
+  if (configFileWatcher) {
+    configFileWatcher.dispose();
   }
 }
 

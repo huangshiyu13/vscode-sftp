@@ -129,6 +129,9 @@ export default class SSHClient extends RemoteClient {
 
     await this._connectSSHClient(this._client, { ...lastOption, sock }, config);
     this.sftp = await this._getSftp(this._client);
+    this.sftp.on('close', () => {
+      this._client.end();
+    });
 
     if (lastOption.limitOpenFilesOnRemote) {
       if (typeof lastOption.limitOpenFilesOnRemote !== 'boolean') {
@@ -338,8 +341,6 @@ export default class SSHClient extends RemoteClient {
         .on('error', err => {
           reject(new Error(`[${option.host}]: ${err.message}`));
         })
-        .on('close', this.end())
-        .on('end', this.end())
         .connect({
           keepaliveInterval: 1000 * 30, // 30 secs, original
           // keepaliveInterval: 1000 * 600, // 10 mins
