@@ -1,21 +1,20 @@
 {
-  "name": "sftp",
-  "displayName": "SFTP",
-  "description": "SFTP/FTP sync",
-  "version": "1.16.3",
-  "publisher": "Natizyskunk",
-  "author": "Natizyskunk <natan.fourie@hotmail.fr> (https://github.com/Natizyskunk)",
+  "name": "sftp-uploader",
+  "displayName": "SFTP Uploader",
+  "description": "Upload, download, diff, and sync local files to FTP and SFTP servers from VS Code, with Remote Explorer, upload-on-save, and improved SSH ProxyJump support.",
+  "version": "0.1.0",
+  "publisher": "huangshiyu",
+  "author": "huangshiyu",
   "engines": {
     "vscode": "^1.64.2"
   },
   "bugs": {
-    "url": "https://github.com/Natizyskunk/vscode-sftp/issues",
-    "email": "natan.fourie@hotmail.fr"
+    "url": "https://github.com/huangshiyu13/vscode-sftp/issues"
   },
-  "homepage": "https://github.com/Natizyskunk/vscode-sftp/blob/master/README.md",
+  "homepage": "https://github.com/huangshiyu13/vscode-sftp",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Natizyskunk/vscode-sftp.git"
+    "url": "https://github.com/huangshiyu13/vscode-sftp.git"
   },
   "license": "MIT",
   "categories": [
@@ -25,7 +24,11 @@
     "ftp",
     "sftp",
     "sync",
-    "remote"
+    "remote",
+    "upload-on-save",
+    "proxyjump",
+    "bastion",
+    "deploy"
   ],
   "activationEvents": [
     "onCommand:sftp.config",
@@ -700,8 +703,12 @@
     "compile": "webpack --mode production",
     "dev": "webpack --mode development --watch",
     "test": "jest",
-    "package": "vsce package",
-    "pub:debug": "rm -rf _debug && mkdir _debug && vsce package --out _debug/sftp-debug.vsix && cd _debug && git init && git commit --allow-empty -m 'update debug package' && git checkout -b debug-pacakge && cp ../INSTALL_DEBUG.md README.md  && git add . && git commit -am 'update debug package' && git push git@github.com:Natizyskunk/vscode-sftp.git debug-pacakge --force"
+    "package": "npx @vscode/vsce package",
+    "publish:marketplace": "npx @vscode/vsce publish",
+    "publish:patch": "npx @vscode/vsce publish patch",
+    "publish:minor": "npx @vscode/vsce publish minor",
+    "publish:major": "npx @vscode/vsce publish major",
+    "pub:debug": "rm -rf _debug && mkdir _debug && npx @vscode/vsce package --out _debug/sftp-uploader-debug.vsix && cd _debug && git init && git commit --allow-empty -m 'update debug package' && git checkout -b debug-package && cp ../INSTALL_DEBUG.md README.md && git add . && git commit -am 'update debug package' && git push git@github.com:huangshiyu13/vscode-sftp.git debug-package --force"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.13",
