@@ -1,53 +1,41 @@
-# sftp sync extension for VS Code
+# SFTP Uploader
 
-Maintained and updated version by [@Natizyskunk](https://github.com/Natizyskunk/) 😀 <br>
-(Forked from the no longer maintained [liximomo's SFTP plugin](https://github.com/liximomo/vscode-sftp.git))
+SFTP Uploader is a maintained VS Code extension for uploading, downloading, diffing, and syncing local folders with remote FTP and SFTP servers.
 
-- VS Code marketplace : https://marketplace.visualstudio.com/items?itemName=Natizyskunk.sftp <br>
-- VSIX release : https://github.com/Natizyskunk/vscode-sftp/releases/
+It is based on the MIT-licensed `vscode-sftp` codebase and focuses on keeping the workflow practical for day-to-day development, including better support for modern SSH setups that rely on OpenSSH `ProxyJump` / bastion hosts.
 
----
+- Repository: https://github.com/huangshiyu13/vscode-sftp
+- Issues: https://github.com/huangshiyu13/vscode-sftp/issues
+- License: MIT
 
-VSCode-SFTP enables you to add, edit or delete files within a local directory and have it sync to a remote server directory using different transfer protocols like FTP or SSH. The most basic setup requires only a few lines of configuration with a wide array of specific settings also available to meet the needs of any user. Both powerful and fast, it helps developers save time by allowing the use of a familiar editor and environment.
-
-- Features
-  - [Browser remote with Remote Explorer](#remote-explorer)
-  - Diff local and remote
-  - Sync directory
-  - Upload/Download
-  - Upload on save
-  - File Watcher
-  - Multiple configurations
-  - Switchable profiles
-  - Temp File support
-- [Commands](https://github.com/Natizyskunk/vscode-sftp/wiki/Commands)
-- [Debug](#debug)
-- [FAQ](#FAQ)
+Core features:
+- [Remote Explorer](#remote-explorer)
+- Diff local and remote files
+- Sync directories in either direction
+- Upload and download individual files or folders
+- Upload on save
+- File watcher support
+- Multiple configurations and profiles
+- FTP and SFTP support
+- Improved SSH config and `ProxyJump` handling
+- [Debugging](#debug)
+- Frequently asked questions in the repository FAQ file
 
 ## Installation
 
-### Method 1 (Recommended : Auto update)
-1. Select Extensions (Ctrl + Shift + X).
-2. Uninstall current sftp extension from @liximomo.
-3. Install new extension directly from VS Code Marketplace : https://marketplace.visualstudio.com/items?itemName=Natizyskunk.sftp.
-4. Voilà!
+### Marketplace
+1. Open the Extensions view in VS Code.
+2. Search for `SFTP Uploader`.
+3. Install the extension published by `huangshiyu`.
+4. Reload VS Code if prompted.
 
-### Method 2 (Manual update)
-To install just follow these steps from within VSCode:
-1. Select Extensions (Ctrl + Shift + X).
-2. Uninstall current sftp extension from @liximomo.
-3. Open "More Action" menu(ellipsis on the top) and click "Install from VSIX…".
-4. Locate VSIX file and select.
-5. Reload VSCode.
-6. Voilà!
+### VSIX
+1. Open the Extensions view in VS Code.
+2. Open the Extensions view menu and select `Install from VSIX...`.
+3. Pick the generated `.vsix` file.
+4. Reload VS Code.
 
-## Documentation
-- [Home](https://github.com/Natizyskunk/vscode-sftp/wiki)
-- [Settings](https://github.com/Natizyskunk/vscode-sftp/wiki/Setting)
-- [Common configuration](https://github.com/Natizyskunk/vscode-sftp/wiki/Common-Configuration)
-- [SFTP configuration](https://github.com/Natizyskunk/vscode-sftp/wiki/SFTP-only-Configuration)
-- [FTP confriguration](https://github.com/Natizyskunk/vscode-sftp/wiki/FTP(s)-only-Configuration)
-- [Commands](https://github.com/Natizyskunk/vscode-sftp/wiki/Commands)
+If you already have another `vscode-sftp` fork installed, uninstall or disable it first. This fork keeps the familiar `sftp.*` command namespace, so running two variants side by side can lead to duplicate commands or confusing behavior.
 
 ## Usage
 If the latest files are already on a remote server, you can start with an empty local folder,
@@ -82,16 +70,15 @@ _Note：_ backslashes and other special characters must be escaped with a backsl
 8. Done - you can now edit locally and after each save it will upload to sync your remote file with the local copy.
 9. Enjoy!
 
-For detailed explanations please go to [wiki](https://github.com/Natizyskunk/vscode-sftp/wiki).
+For common workflows and configuration patterns, continue with the examples below and check the repository FAQ if you run into edge cases.
 
 ## Example configurations
-You can see the full list of configuration options [here](https://github.com/Natizyskunk/vscode-sftp/wiki/configuration).
+This section covers the most common configuration layouts used in practice.
 
-- [sftp sync extension for VS Code](#sftp-sync-extension-for-vs-code)
+- [SFTP Uploader](#sftp-uploader)
   - [Installation](#installation)
-    - [Method 1 (Recommended : Auto update)](#method-1-recommended--auto-update)
-    - [Method 2 (Manual update)](#method-2-manual-update)
-  - [Documentation](#documentation)
+    - [Marketplace](#marketplace)
+    - [VSIX](#vsix)
   - [Usage](#usage)
   - [Example configurations](#example-configurations)
     - [Simple](#simple)
@@ -106,9 +93,6 @@ You can see the full list of configuration options [here](https://github.com/Nat
     - [Order](#order)
   - [Debug](#debug)
   - [FAQ](#faq)
-  - [Donation](#donation)
-    - [Buy Me a Coffee](#buy-me-a-coffee)
-    - [PayPal](#paypal)
 
 ### Simple
 ```json
@@ -263,8 +247,6 @@ In sftp.json:
 ```
 
 ## Remote Explorer
-![remote-explorer-preview](https://raw.githubusercontent.com/Natizyskunk/vscode-sftp/master/assets/showcase/remote-explorer.png)
-
 Remote Explorer lets you explore files in remote. You can open Remote Explorer by:
 
 1. Run Command `View: Show SFTP`.
@@ -297,15 +279,4 @@ In sftp.json:
 3. View the logs in `View > Output > sftp`.
 
 ## FAQ
-You can see all the Frequently Asked Questions [here](./FAQ.md).
-
-## Donation
-If this project helped you reduce development time and you wish to contribute financially
-
-### Buy Me a Coffee
-[![Buy Me A Coffee](https://bmc-cdn.nyc3.digitaloceanspaces.com/BMC-button-images/custom_images/orange_img.png)](https://www.buymeacoffee.com/Natizyskunk)
-
-### PayPal
-<!-- [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=BY89QD47D7MPS&source=url) -->
-[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate?business=DELD7APHHM3BC&no_recurring=0&currency_code=EUR)
-[![PayPal Me](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://paypal.me/natanfourie)
+See `FAQ.md` in the repository for troubleshooting notes and known edge cases.
