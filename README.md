@@ -2,13 +2,34 @@
 
 English | [简体中文](README_zh.md)
 
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/huangshiyu.sftp-uploader?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=huangshiyu.sftp-uploader)
+[![VS Code Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/huangshiyu.sftp-uploader)](https://marketplace.visualstudio.com/items?itemName=huangshiyu.sftp-uploader)
+[![GitHub Release](https://img.shields.io/github/v/release/huangshiyu13/vscode-sftp?display_name=tag)](https://github.com/huangshiyu13/vscode-sftp/releases)
+
 SFTP Uploader is a maintained VS Code extension for uploading, downloading, diffing, and syncing local folders with remote FTP and SFTP servers.
+
+It keeps the familiar `vscode-sftp` workflow, but is better suited for modern SSH environments where connections go through bastion hosts, OpenSSH aliases, and `ProxyJump`.
 
 It is based on the MIT-licensed `vscode-sftp` codebase and keeps the familiar workflow that many teams already rely on, while improving compatibility with modern OpenSSH setups such as `ProxyJump`, bastion hosts, and SSH aliases defined in `~/.ssh/config`.
 
+## Quick Links
+
+- Marketplace: https://marketplace.visualstudio.com/items?itemName=huangshiyu.sftp-uploader
+- GitHub Releases: https://github.com/huangshiyu13/vscode-sftp/releases
 - Repository: https://github.com/huangshiyu13/vscode-sftp
 - Issues: https://github.com/huangshiyu13/vscode-sftp/issues
 - License: MIT
+
+## Why SFTP Uploader
+
+If you already know and like `vscode-sftp`, this fork is meant to feel familiar.
+
+If your SSH setup is more realistic than "directly connect to one public host", this fork is meant to work better out of the box.
+
+- Keep using `.vscode/sftp.json`
+- Keep using familiar `sftp.*` commands
+- Keep `uploadOnSave`, manual upload, sync, and Remote Explorer
+- Improve compatibility with OpenSSH aliases, bastion hosts, and `ProxyJump`
 
 ## Why this fork
 
@@ -42,7 +63,13 @@ This fork exists to keep the extension practical for real development environmen
 
 ### Marketplace
 
-1. Open the Extensions view in VS Code.
+Install directly from the VS Code Marketplace:
+
+https://marketplace.visualstudio.com/items?itemName=huangshiyu.sftp-uploader
+
+Or inside VS Code:
+
+1. Open the Extensions view.
 2. Search for `SFTP Uploader`.
 3. Install the extension published by `huangshiyu`.
 4. Reload VS Code if prompted.

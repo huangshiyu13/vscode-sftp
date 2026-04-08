@@ -2,13 +2,32 @@
 
 [English](README.md) | 简体中文
 
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/huangshiyu.sftp-uploader?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=huangshiyu.sftp-uploader)
+[![VS Code Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/huangshiyu.sftp-uploader)](https://marketplace.visualstudio.com/items?itemName=huangshiyu.sftp-uploader)
+[![GitHub Release](https://img.shields.io/github/v/release/huangshiyu13/vscode-sftp?display_name=tag)](https://github.com/huangshiyu13/vscode-sftp/releases)
+
 SFTP Uploader 是一个维护中的 VS Code 扩展，用来在本地工作区和远程 FTP / SFTP 服务器之间进行上传、下载、对比和同步。
 
 它基于 MIT 许可的 `vscode-sftp` 代码库继续演进，保留了很多团队已经习惯的使用方式，同时补强了更贴近真实生产环境的 SSH 场景，比如 `ProxyJump`、堡垒机和 `~/.ssh/config` 里的 SSH alias。
 
+## 快速链接
+
+- Marketplace：https://marketplace.visualstudio.com/items?itemName=huangshiyu.sftp-uploader
+- GitHub Releases：https://github.com/huangshiyu13/vscode-sftp/releases
 - 仓库：https://github.com/huangshiyu13/vscode-sftp
 - Issues：https://github.com/huangshiyu13/vscode-sftp/issues
 - 许可证：MIT
+
+## 为什么叫 SFTP Uploader
+
+如果你已经习惯了 `vscode-sftp` 的用法，这个 fork 应该还是熟悉的。
+
+如果你的 SSH 环境不是“直接连一台公网机器”那么简单，而是要经过堡垒机、SSH alias 或 `ProxyJump`，这个 fork 会更适合你。
+
+- 继续使用 `.vscode/sftp.json`
+- 继续使用熟悉的 `sftp.*` 命令
+- 保留 `uploadOnSave`、手动上传、同步和 Remote Explorer
+- 更好地兼容 OpenSSH alias、堡垒机和 `ProxyJump`
 
 ## 这个 fork 的定位
 
@@ -42,7 +61,13 @@ SFTP Uploader 是一个维护中的 VS Code 扩展，用来在本地工作区和
 
 ### 从 Marketplace 安装
 
-1. 打开 VS Code 的扩展视图。
+可以直接从 VS Code Marketplace 安装：
+
+https://marketplace.visualstudio.com/items?itemName=huangshiyu.sftp-uploader
+
+或者在 VS Code 里：
+
+1. 打开扩展视图。
 2. 搜索 `SFTP Uploader`。
 3. 安装 `huangshiyu` 发布的版本。
 4. 如果提示重载 VS Code，就执行重载。
