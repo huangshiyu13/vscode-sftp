@@ -670,6 +670,10 @@
     "dev": "webpack --mode development --watch",
     "test": "jest",
     "package": "npx @vscode/vsce package",
+    "publish:marketplace": "npx @vscode/vsce publish",
+    "publish:patch": "npx @vscode/vsce publish patch",
+    "publish:minor": "npx @vscode/vsce publish minor",
+    "publish:major": "npx @vscode/vsce publish major",
     "pub:debug": "rm -rf _debug && mkdir _debug && npx @vscode/vsce package --out _debug/sftp-uploader-debug.vsix && cd _debug && git init && git commit --allow-empty -m 'update debug package' && git checkout -b debug-package && cp ../INSTALL_DEBUG.md README.md && git add . && git commit -am 'update debug package' && git push git@github.com:huangshiyu13/vscode-sftp.git debug-package --force"
   },
   "devDependencies": {
