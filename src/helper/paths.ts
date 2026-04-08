@@ -1,12 +1,15 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { URI } from 'vscode-uri';
+import URI from 'vscode-uri';
 import { upath } from '../core';
 import { pathRelativeToWorkspace, getWorkspaceFolders } from '../host';
 
 // from https://github.com/microsoft/vscode-eslint/blob/d97a8b5e99ad30d2ce32ffa5646447202f873413/server/src/eslintServer.ts#L816
-function getFileSystemPath(uri: URI): string {
+function getFileSystemPath(uri: URI | string): string {
+	if (typeof uri === 'string') {
+		return uri;
+	}
 	let result = uri.fsPath;
 	if (process.platform === 'win32' && result.length >= 2 && result[1] === ':') {
 		// Node by default uses an upper case drive letter and ESLint uses
