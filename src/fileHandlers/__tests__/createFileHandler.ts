@@ -1,6 +1,6 @@
 class UriMock {
   fsPath: string;
-  private raw: string;
+  raw: string;
 
   constructor(fsPath: string, raw?: string) {
     this.fsPath = fsPath;
@@ -133,6 +133,24 @@ describe('fileHandlers/createFileHandler', () => {
     expect(fromResource).toHaveBeenCalledTimes(2);
   });
 
+  test('allHandleCtxFromUri throws for special command URI', () => {
+    getFileService.mockReturnValue(undefined);
+    const specialUri = new UriMock(
+      '/workspace/project',
+      'file:///${command:sftp.sync.remoteToLocal}'
+    );
+
+    expect(() => allHandleCtxFromUri(specialUri as any)).toThrow('');
+  });
+
+  test('allHandleCtxFromUri throws for missing config', () => {
+    getFileService.mockReturnValue(undefined);
+
+    expect(() => allHandleCtxFromUri(uri as any)).toThrow(
+      'Config Not Found. (file:///workspace/project/src/index.ts)'
+    );
+  });
+
   test('runs a handler with merged options and spinner lifecycle', async () => {
     const handle = jest.fn().mockResolvedValue(undefined);
     const afterHandle = jest.fn();
@@ -176,6 +194,32 @@ describe('fileHandlers/createFileHandler', () => {
     expect(stopSpinner).not.toHaveBeenCalled();
   });
 
+  test('does not ignore when ignore returns false', async () => {
+    const handle = jest.fn().mockResolvedValue(undefined);
+    const fileHandler = createFileHandler({
+      name: 'upload',
+      handle,
+      transformOption() {
+        return {
+          base: true,
+          ignore: () => false,
+        };
+      },
+    });
+
+    await fileHandler(uri as any, { force: true } as any);
+
+    expect(handle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        base: true,
+        force: true,
+        ignore: expect.any(Function),
+      })
+    );
+    expect(startSpinner).toHaveBeenCalledTimes(1);
+    expect(stopSpinner).toHaveBeenCalledTimes(1);
+  });
+
   test('always stops the spinner when the handler throws', async () => {
     const fileHandler = createFileHandler({
       name: 'upload',
@@ -187,5 +231,52 @@ describe('fileHandlers/createFileHandler', () => {
     await expect(fileHandler(uri as any)).rejects.toThrow('boom');
     expect(startSpinner).toHaveBeenCalledTimes(1);
     expect(stopSpinner).toHaveBeenCalledTimes(1);
+  });
+
+  test('accepts a pre-built context instead of a Uri', async () => {
+    const handle = jest.fn().mockResolvedValue(undefined);
+    const afterHandle = jest.fn();
+    const fileHandler = createFileHandler({
+      name: 'download',
+      handle,
+      afterHandle,
+    });
+
+    const ctx = {
+      target: { localFsPath: '/workspace/project/file.txt' },
+      fileService: service,
+      config: service.getConfig(),
+    };
+
+    await fileHandler(ctx as any);
+
+    expect(getFileService).not.toHaveBeenCalled();
+    expect(handle).toHaveBeenCalled();
+    expect(afterHandle).toHaveBeenCalled();
+  });
+
+  test('does not call afterHandle when not provided', async () => {
+    const handle = jest.fn().mockResolvedValue(undefined);
+    const fileHandler = createFileHandler({
+      name: 'upload',
+      handle,
+    });
+
+    await fileHandler(uri as any);
+
+    expect(handle).toHaveBeenCalled();
+    expect(stopSpinner).toHaveBeenCalled();
+  });
+
+  test('runs without transformOption', async () => {
+    const handle = jest.fn().mockResolvedValue(undefined);
+    const fileHandler = createFileHandler({
+      name: 'upload',
+      handle,
+    });
+
+    await fileHandler(uri as any);
+
+    expect(handle).toHaveBeenCalledWith({});
   });
 });

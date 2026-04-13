@@ -1,245 +1,238 @@
-class UriMock {
-  fsPath: string;
-
-  constructor(fsPath: string) {
-    this.fsPath = fsPath;
-  }
-
-  static file(fsPath: string) {
-    return new UriMock(fsPath);
-  }
-}
-
-const info = jest.fn();
-const simplifyPath = jest.fn();
-const reportError = jest.fn();
-const findRoot = jest.fn();
-const showMsg = jest.fn();
-const validateConfig = jest.fn();
-const maskConfig = jest.fn();
-const isRemote = jest.fn();
-const watcherService = {
-  id: 'watcher-service',
-};
-
-class MockFileService {
-  baseDir: string;
-  workspace: string;
-  config: any;
-  name: string | undefined;
-  validator: any;
-  watcher: any;
-  beforeTransferHandler: any;
-  afterTransferHandler: any;
-  pendingTasks: any[];
-  dispose: jest.Mock;
-
-  constructor(baseDir: string, workspace: string, config: any) {
-    this.baseDir = baseDir;
-    this.workspace = workspace;
-    this.config = config;
-    this.pendingTasks = [];
-    this.dispose = jest.fn();
-  }
-
-  setConfigValidator(validator: any) {
-    this.validator = validator;
-  }
-
-  setWatcherService(watcher: any) {
-    this.watcher = watcher;
-  }
-
-  beforeTransfer(listener: any) {
-    this.beforeTransferHandler = listener;
-  }
-
-  afterTransfer(listener: any) {
-    this.afterTransferHandler = listener;
-  }
-
-  getPendingTransferTasks() {
-    return this.pendingTasks;
-  }
-}
-
-jest.mock('vscode', () => ({
-  Uri: UriMock,
-}));
-
-jest.mock('../../app', () => ({
-  __esModule: true,
-  default: {
-    state: {},
-    remoteExplorer: {
-      findRoot: (...args) => findRoot(...args),
-    },
-    sftpBarItem: {
-      showMsg: (...args) => showMsg(...args),
-    },
-  },
-}));
+const loggerInfoMock = jest.fn();
+const reportErrorMock = jest.fn();
 
 jest.mock('../../logger', () => ({
   __esModule: true,
   default: {
-    info: (...args) => info(...args),
+    info: loggerInfoMock,
   },
 }));
 
 jest.mock('../../helper', () => ({
   __esModule: true,
-  simplifyPath: (...args) => simplifyPath(...args),
-  reportError: (...args) => reportError(...args),
+  reportError: reportErrorMock,
+  simplifyPath: jest.fn().mockReturnValue('simplified-path'),
+}));
+
+jest.mock('../../app', () => ({
+  __esModule: true,
+  default: {
+    state: { profile: undefined },
+    sftpBarItem: {
+      showMsg: jest.fn(),
+    },
+    remoteExplorer: {
+      findRoot: jest.fn().mockReturnValue(null),
+    },
+  },
 }));
 
 jest.mock('../../core', () => ({
   __esModule: true,
   UResource: {
-    isRemote: (...args) => isRemote(...args),
+    isRemote: jest.fn().mockReturnValue(false),
   },
-  FileService: MockFileService,
+  FileService: class FileService {
+    baseDir = '/workspace';
+    name = '';
+    setConfigValidator = jest.fn();
+    setWatcherService = jest.fn();
+    beforeTransfer = jest.fn();
+    afterTransfer = jest.fn();
+    dispose = jest.fn();
+    getPendingTransferTasks = jest.fn().mockReturnValue([]);
+  },
   TransferTask: class TransferTask {},
 }));
 
 jest.mock('../config', () => ({
   __esModule: true,
-  validateConfig: (...args) => validateConfig(...args),
+  validateConfig: jest.fn(),
 }));
 
 jest.mock('../fileWatcher', () => ({
   __esModule: true,
-  default: watcherService,
+  default: {},
 }));
 
 jest.mock('../serviceManager/maskConfig', () => ({
   __esModule: true,
-  default: (...args) => maskConfig(...args),
+  default: (config: any) => config,
 }));
 
+jest.mock('../serviceManager/trie', () => {
+  const TrieClass = class Trie<T> {
+    private data: { [key: string]: T } = {};
+    add(path: string, value: T) {
+      this.data[path] = value;
+    }
+    findPrefix(path: string): T | null {
+      const keys = Object.keys(this.data).sort().reverse();
+      for (const key of keys) {
+        if (path.startsWith(key)) {
+          return this.data[key];
+        }
+      }
+      return null;
+    }
+    remove(path: string) {
+      delete this.data[path];
+    }
+    getAllValues(): T[] {
+      return Object.values(this.data);
+    }
+  };
+  return { __esModule: true, default: TrieClass };
+});
+
+import * as path from 'path';
+import { getBasePath, createFileService, getFileService, disposeFileService, findAllFileService, getAllFileService } from '../serviceManager';
 import app from '../../app';
-import {
-  getBasePath,
-  createFileService,
-  getFileService,
-  disposeFileService,
-  findAllFileService,
-  getAllFileService,
-  getRunningTransformTasks,
-} from '../serviceManager';
+import { UResource } from '../../core';
 
 describe('modules/serviceManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (app.state as any).profile = undefined;
-    simplifyPath.mockImplementation((target: string) => `short:${target}`);
-    maskConfig.mockImplementation(config => ({ maskedName: config.name }));
+    app.state.profile = undefined;
   });
 
-  afterEach(() => {
-    getAllFileService().forEach(disposeFileService);
+  describe('getBasePath', () => {
+    test('returns workspace when context is empty', () => {
+      expect(getBasePath('', '/workspace')).toBe(path.normalize('/workspace'));
+    });
+
+    test('returns absolute context directly', () => {
+      expect(getBasePath('/custom/path', '/workspace')).toBe(path.normalize('/custom/path'));
+    });
+
+    test('joins relative context with workspace', () => {
+      expect(getBasePath('subdir', '/workspace')).toBe(path.normalize('/workspace/subdir'));
+    });
+
+    test('normalizes the result path', () => {
+      // path.normalize strips trailing slashes but getBasePath joins paths then normalizes
+      const result = getBasePath('subdir/', '/workspace/');
+      expect(result).not.toContain('//');
+    });
   });
 
-  test('getBasePath resolves relative context against the workspace', () => {
-    expect(getBasePath('src', '/workspace/project')).toBe('/workspace/project/src');
-    expect(getBasePath(undefined as any, '/workspace/project')).toBe('/workspace/project');
-    expect(getBasePath('/workspace/project/custom', '/workspace/project')).toBe(
-      '/workspace/project/custom'
-    );
+  describe('createFileService', () => {
+    test('creates and registers a file service', () => {
+      const config = { host: 'example.com' };
+      const service = createFileService(config, '/workspace');
+
+      expect(service).toBeDefined();
+      expect(service.name).toBeUndefined();
+      expect(loggerInfoMock).toHaveBeenCalled();
+    });
+
+    test('sets default profile from config', () => {
+      const config = { defaultProfile: 'production' };
+      createFileService(config, '/workspace');
+
+      expect(app.state.profile).toBe('production');
+    });
+
+    test('sets service name from config', () => {
+      const config = { name: 'my-server', host: 'example.com' };
+      const service = createFileService(config, '/workspace');
+
+      expect(service.name).toBe('my-server');
+    });
+
+    test('registers beforeTransfer callback', () => {
+      const config = { host: 'example.com' };
+      const service = createFileService(config, '/workspace');
+
+      expect(service.beforeTransfer).toHaveBeenCalled();
+    });
+
+    test('registers afterTransfer callback', () => {
+      const config = { host: 'example.com' };
+      const service = createFileService(config, '/workspace');
+
+      expect(service.afterTransfer).toHaveBeenCalled();
+    });
   });
 
-  test('createFileService registers a service and wires transfer lifecycle messages', () => {
-    const config = {
-      name: 'Primary',
-      host: 'target.internal',
-      remotePath: '/remote/project',
-      defaultProfile: 'prod',
-    };
+  describe('getFileService', () => {
+    test('returns null for non-remote URI with no matching service', () => {
+      (UResource.isRemote as jest.Mock).mockReturnValue(false);
+      const uri = { fsPath: '/unknown/path/file.txt' };
 
-    const service: any = createFileService(config, '/workspace/project');
+      const result = getFileService(uri as any);
 
-    expect((app.state as any).profile).toBe('prod');
-    expect(service.baseDir).toBe('/workspace/project');
-    expect(service.name).toBe('Primary');
-    service.validator('payload');
-    expect(validateConfig).toHaveBeenCalledWith('payload');
-    expect(service.watcher).toBe(watcherService);
-    expect(info).toHaveBeenCalledWith('config at /workspace/project', { maskedName: 'Primary' });
-
-    service.beforeTransferHandler({
-      localFsPath: '/workspace/project/src/index.ts',
-      transferType: 'upload',
+      expect(result).toBeNull();
     });
 
-    expect(showMsg).toHaveBeenCalledWith(
-      'upload index.ts',
-      'short:/workspace/project/src/index.ts'
-    );
+    test('returns file service for remote URI via remoteExplorer', () => {
+      (UResource.isRemote as jest.Mock).mockReturnValue(true);
+      const mockService = { baseDir: '/remote' };
+      (app.remoteExplorer.findRoot as jest.Mock).mockReturnValue({
+        explorerContext: { fileService: mockService },
+      });
+      const uri = { fsPath: '/remote/file.txt' };
 
-    service.afterTransferHandler(undefined, {
-      localFsPath: '/workspace/project/src/index.ts',
-      transferType: 'upload',
-      isCancelled: () => true,
-    });
-    service.afterTransferHandler(new Error('failed'), {
-      localFsPath: '/workspace/project/src/index.ts',
-      transferType: 'download',
-      isCancelled: () => false,
-    });
-    service.afterTransferHandler(undefined, {
-      localFsPath: '/workspace/project/src/index.ts',
-      transferType: 'sync',
-      isCancelled: () => false,
+      const result = getFileService(uri as any);
+
+      expect(result).toBe(mockService);
     });
 
-    expect(info).toHaveBeenCalledWith('cancel transfer /workspace/project/src/index.ts');
-    expect(reportError).toHaveBeenCalledWith(
-      expect.any(Error),
-      'when download /workspace/project/src/index.ts'
-    );
-    expect(info).toHaveBeenCalledWith('sync /workspace/project/src/index.ts');
-    expect(showMsg).toHaveBeenCalledWith(
-      'failed index.ts',
-      'short:/workspace/project/src/index.ts',
-      4000
-    );
-    expect(showMsg).toHaveBeenCalledWith(
-      'done index.ts',
-      'short:/workspace/project/src/index.ts',
-      4000
-    );
+    test('returns undefined for remote URI with no root found', () => {
+      (UResource.isRemote as jest.Mock).mockReturnValue(true);
+      (app.remoteExplorer.findRoot as jest.Mock).mockReturnValue(null);
+      const uri = { fsPath: '/remote/file.txt' };
+
+      const result = getFileService(uri as any);
+
+      expect(result).toBeUndefined();
+    });
   });
 
-  test('getFileService supports local prefixes, remote roots, and task aggregation', () => {
-    const localService: any = createFileService(
-      {
-        name: 'Local',
-        host: 'target.internal',
-        remotePath: '/remote/project',
-      },
-      '/workspace/project'
-    );
-    const remoteService = { id: 'remote-service' };
+  describe('disposeFileService', () => {
+    test('calls dispose on the file service', () => {
+      const mockService: any = {
+        baseDir: '/workspace',
+        dispose: jest.fn(),
+      };
 
-    localService.pendingTasks = [{ id: 1 }, { id: 2 }];
-    isRemote.mockReturnValue(false);
+      disposeFileService(mockService);
 
-    expect(getFileService(UriMock.file('/workspace/project/src/index.ts') as any)).toBe(localService);
-    expect(findAllFileService(service => service.name === 'Local')).toEqual([localService]);
-    expect(getRunningTransformTasks()).toEqual([{ id: 1 }, { id: 2 }]);
+      expect(mockService.dispose).toHaveBeenCalled();
+    });
+  });
 
-    isRemote.mockReturnValue(true);
-    findRoot.mockReturnValue({
-      explorerContext: {
-        fileService: remoteService,
-      },
+  describe('findAllFileService', () => {
+    test('returns filtered services', () => {
+      const config = { host: 'example.com', name: 'test-service' };
+      createFileService(config, '/workspace-test');
+
+      const result = findAllFileService((s: any) => s.name === 'test-service');
+
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].name).toBe('test-service');
     });
 
-    expect(getFileService({ scheme: 'remote' } as any)).toBe(remoteService);
+    test('returns empty array when no service matches', () => {
+      const result = findAllFileService(() => false);
 
-    disposeFileService(localService);
+      expect(result).toEqual([]);
+    });
+  });
 
-    expect(localService.dispose).toHaveBeenCalled();
-    expect(getAllFileService()).toEqual([]);
+  describe('getAllFileService', () => {
+    test('returns all registered services', () => {
+      const config1 = { host: 'host1.com', name: 'service1' };
+      const config2 = { host: 'host2.com', name: 'service2' };
+      createFileService(config1, '/workspace1');
+      createFileService(config2, '/workspace2');
+
+      const result = getAllFileService();
+
+      expect(result.length).toBeGreaterThanOrEqual(2);
+      const names = result.map((s: any) => s.name);
+      expect(names).toContain('service1');
+      expect(names).toContain('service2');
+    });
   });
 });

@@ -228,4 +228,85 @@ describe('core/remoteFs', () => {
       })
     ).rejects.toThrow('unsupported protocol http');
   });
+
+  test('hashOption normalizes options with nested objects, arrays, and functions', async () => {
+    const { createRemoteIfNoneExist } = require('../remoteFs');
+
+    // Options with nested objects and arrays that should be normalized
+    const optionA = {
+      protocol: 'sftp',
+      host: 'nested.internal',
+      port: 22,
+      remoteTimeOffsetInHours: 0,
+      proxyJump: [{ host: 'jump.internal', port: 2222 }],
+      algorithms: { kex: ['curve25519-sha256'] },
+    };
+    const optionB = {
+      protocol: 'sftp',
+      host: 'nested.internal',
+      port: 22,
+      remoteTimeOffsetInHours: 0,
+      proxyJump: [{ port: 2222, host: 'jump.internal' }],
+      algorithms: { kex: ['curve25519-sha256'] },
+    };
+
+    const fsA = await createRemoteIfNoneExist(optionA);
+    const fsB = await createRemoteIfNoneExist(optionB);
+
+    // Both should resolve to the same cached instance since they're structurally equal
+    expect(fsA).toBe(fsB);
+    expect(sftpInstances).toHaveLength(1);
+  });
+
+  test('hashOption strips function values from options', async () => {
+    const { createRemoteIfNoneExist } = require('../remoteFs');
+
+    const fnA = () => 'a';
+    const fnB = () => 'b';
+
+    const optionA = {
+      protocol: 'sftp',
+      host: 'func.internal',
+      port: 22,
+      remoteTimeOffsetInHours: 0,
+      ignore: fnA,
+    };
+    const optionB = {
+      protocol: 'sftp',
+      host: 'func.internal',
+      port: 22,
+      remoteTimeOffsetInHours: 0,
+      ignore: fnB,
+    };
+
+    const fsA = await createRemoteIfNoneExist(optionA);
+    const fsB = await createRemoteIfNoneExist(optionB);
+
+    // Function values are stripped during normalization, so both should resolve to the same instance
+    expect(fsA).toBe(fsB);
+  });
+
+  test('returns pending promise when a connection is already in progress', async () => {
+    const { createRemoteIfNoneExist } = require('../remoteFs');
+
+    let resolveConnect: () => void;
+    createSftpConnectMock = () => jest.fn().mockImplementation(() => new Promise<void>(resolve => {
+      resolveConnect = resolve;
+    }));
+
+    const option = {
+      protocol: 'sftp',
+      host: 'pending.internal',
+      port: 22,
+      remoteTimeOffsetInHours: 0,
+    };
+
+    const promise1 = createRemoteIfNoneExist(option);
+    const promise2 = createRemoteIfNoneExist(option);
+
+    // Both should resolve to the same filesystem instance
+    resolveConnect!();
+    const [result1, result2] = await Promise.all([promise1, promise2]);
+    expect(result1).toBe(result2);
+  });
 });

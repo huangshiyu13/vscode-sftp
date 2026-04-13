@@ -180,6 +180,44 @@ describe('commands/abstract/createCommand', () => {
     expect(reportError).toHaveBeenCalledWith(error);
   });
 
+  test('createFileCommand skips the upload-to-all-profiles confirmation for other command IDs', async () => {
+    const getFileTarget = jest.fn().mockResolvedValue(UriMock.file('/workspace/project/a.ts'));
+    const handleFile = jest.fn().mockResolvedValue(undefined);
+
+    // Use a regular command ID (not the upload-to-all-profiles one)
+    const commandClass = createFileCommand({
+      id: 'sftp.upload.file',
+      name: 'Upload File',
+      getFileTarget,
+      handleFile,
+    });
+
+    await new commandClass().run();
+
+    // Should NOT show confirmation for non-upload-to-all-profiles commands
+    expect(showInformationMessage).not.toHaveBeenCalled();
+    expect(getFileTarget).toHaveBeenCalled();
+  });
+
+  test('createFileMultiCommand skips the upload-to-all-profiles confirmation for non-matching IDs', async () => {
+    const getFileTarget = jest.fn().mockResolvedValue(UriMock.file('/workspace/project/a.ts'));
+    const handleFile = jest.fn().mockResolvedValue(undefined);
+
+    const commandClass = createFileMultiCommand({
+      id: 'sftp.sync.both',
+      name: 'Sync Both Directions',
+      getFileTarget,
+      handleFile,
+    });
+
+    showInformationMessage.mockResolvedValue('No');
+
+    await new commandClass().run();
+
+    expect(showInformationMessage).not.toHaveBeenCalled();
+    expect(getFileTarget).toHaveBeenCalled();
+  });
+
   test('createFileMultiCommand expands all profiles for every selected target', async () => {
     const target = UriMock.file('/workspace/project/a.ts');
     const profileA = { remoteId: 1 };

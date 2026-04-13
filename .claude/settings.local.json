@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(json|js|ts|config|tslint\\)$\")",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(awk -F'|' '{gsub\\(/^ +| +$/, \"\", $1\\); gsub\\(/^ +| +$/, \"\", $2\\); if \\($2+0 < 95\\) print $1, $2\"%\"}')",
+      "Bash(sort -t'%' -k1 -n)",
+      "Bash(awk -F'|' '{gsub\\(/^ +| +$/, \"\", $1\\); gsub\\(/^ +| +$/, \"\", $2\\); if \\($2+0 < 90\\) print $1, $2\"%\"}')",
+      "Bash(awk -F'|' '{gsub\\(/^ +| +$/, \"\", $1\\); gsub\\(/^ +| +$/, \"\", $2\\); gsub\\(/^ +| +$/, \"\", $3\\); if \\($2+0 >= 80 && $2+0 < 95\\) print $1, \"stmt=\"$2\"%\", \"branch=\"$3\"%\"}')",
+      "Bash(sort -t'=' -k2 -n)",
+      "Bash(awk '-F|' '{:*)"
+    ]
+  }
+}

@@ -4,9 +4,26 @@ import { registerCommand } from './host';
 import Command from './commands/abstract/command';
 import { createCommand, createFileCommand, createFileMultiCommand } from './commands/abstract/createCommand';
 
-export default function init(context: ExtensionContext) {
+type RequireContext = {
+  (fileName: string): {
+    default: any;
+  };
+  keys(): string[];
+};
+
+type RequireContextFactory = (
+  path: string,
+  useSubdirectories: boolean,
+  fileRegex: RegExp
+) => RequireContext;
+
+export default function init(
+  context: ExtensionContext,
+  requireContextFactory?: RequireContextFactory
+) {
+  const contextFactory = requireContextFactory || (require as any).context;
   loadCommands(
-    require.context(
+    contextFactory(
       // Look for files in the commands directory
       './commands',
       // Do not look in subdirectories
@@ -19,7 +36,7 @@ export default function init(context: ExtensionContext) {
     context
   );
   loadCommands(
-    require.context(
+    contextFactory(
       // Look for files in the current directory
       './commands',
       // Do not look in subdirectories
@@ -32,7 +49,7 @@ export default function init(context: ExtensionContext) {
     context
   );
   loadCommands(
-    require.context(
+    contextFactory(
       // Look for files in the current directory
       './commands',
       // Do not look in subdirectories
@@ -46,12 +63,17 @@ export default function init(context: ExtensionContext) {
   );
 }
 
-function nomalizeCommandName(rawName) {
+export function nomalizeCommandName(rawName) {
   const firstLetter = rawName[0].toUpperCase();
   return firstLetter + rawName.slice(1).replace(/[A-Z]/g, token => ` ${token[0]}`);
 }
 
-async function loadCommands(requireContext, nameRegex, commandCreator, context: ExtensionContext) {
+export async function loadCommands(
+  requireContext,
+  nameRegex,
+  commandCreator,
+  context: ExtensionContext
+) {
   requireContext.keys().forEach(fileName => {
     const clearName = fileName
       // Remove the "./" from the beginning

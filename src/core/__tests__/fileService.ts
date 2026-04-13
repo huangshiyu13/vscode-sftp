@@ -322,4 +322,83 @@ Host bastion
       })
     );
   });
+
+  test('uses cached ignore and ssh config content, warns about auth conflicts, and resolves relative paths', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sftp-cache-'));
+    const ignoreFile = path.join(tempDir, '.cached-ignore');
+
+    (app.fsCache as Map<string, any>).set(ignoreFile, 'cached/**');
+    (app.fsCache as Map<string, any>).set('./cached-ssh-config', '');
+
+    const service = new FileService(tempDir, tempDir, {
+      protocol: 'sftp',
+      host: 'target.internal',
+      remotePath: './remote/base',
+      uploadOnSave: false,
+      useTempFile: false,
+      openSsh: false,
+      agent: 'agent.sock',
+      privateKeyPath: './id_rsa',
+      ignore: [],
+      ignoreFile: './.cached-ignore',
+      sshConfigPath: './cached-ssh-config',
+      proxyJump: [
+        {
+          host: 'jump.internal',
+          username: 'root',
+          privateKeyPath: './jump_rsa',
+        },
+      ],
+      watcher: {
+        files: false,
+        autoUpload: false,
+        autoDelete: false,
+      },
+    } as any);
+
+    const config = service.getConfig();
+
+    expect(warn).toHaveBeenCalledWith(
+      'Config Option Conflicted. You are specifing "agent" and "privateKey" at the same time, the later will be ignored.'
+    );
+    expect(config.remotePath).toBe('remote/base');
+    expect(config.privateKeyPath).toBe(path.join(tempDir, 'id_rsa'));
+    expect(config.proxyJump).toEqual([
+      expect.objectContaining({
+        host: 'jump.internal',
+        privateKeyPath: path.join(tempDir, 'jump_rsa'),
+      }),
+    ]);
+    expect(config.ignore!(path.join(tempDir, 'cached', 'file.txt'))).toBe(true);
+  });
+
+  test('throws when the configured agent environment variable is missing and handles empty scheduler runs', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sftp-missing-agent-'));
+    delete process.env.MISSING_SFTP_AGENT;
+
+    const service = new FileService(tempDir, tempDir, {
+      protocol: 'sftp',
+      host: 'target.internal',
+      remotePath: '/remote/base',
+      uploadOnSave: false,
+      useTempFile: false,
+      openSsh: false,
+      agent: '$MISSING_SFTP_AGENT',
+      ignore: [],
+      watcher: {
+        files: false,
+        autoUpload: false,
+        autoDelete: false,
+      },
+    } as any);
+
+    expect(() => service.getConfig()).toThrow('Environment variable "MISSING_SFTP_AGENT" not found');
+    expect(service.getAvailableProfiles()).toEqual([]);
+    expect(service.getAllConfig()).toEqual([]);
+
+    const scheduler = service.createTransferScheduler(1);
+    await expect(scheduler.run()).resolves.toBeUndefined();
+    scheduler.stop();
+    await expect(scheduler.run()).resolves.toBeUndefined();
+  });
 });

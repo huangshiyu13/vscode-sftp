@@ -44,6 +44,7 @@ describe('core/fs/localFileSystem', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     fse.removeSync(tempDir);
   });
 
@@ -143,5 +144,86 @@ describe('core/fs/localFileSystem', () => {
     await expect(fileSystem.unlink(atomicPath)).resolves.toBeUndefined();
     expect(fs.existsSync(linkPath)).toBe(false);
     expect(fs.existsSync(atomicPath)).toBe(false);
+  });
+
+  test('surfaces filesystem errors from wrapped node callbacks', async () => {
+    const expected = new Error('boom');
+
+    jest
+      .spyOn(fs, 'lstat')
+      .mockImplementationOnce(((targetPath, callback) => callback(expected)) as any);
+    await expect(fileSystem.lstat('/missing')).rejects.toBe(expected);
+
+    jest
+      .spyOn(fs, 'readFile')
+      .mockImplementationOnce(((targetPath, option, callback) => callback(expected)) as any);
+    await expect(fileSystem.readFile('/missing')).rejects.toBe(expected);
+
+    jest.spyOn(fs, 'createReadStream').mockImplementationOnce(() => {
+      throw expected;
+    });
+    await expect(fileSystem.get('/missing')).rejects.toBe(expected);
+
+    jest
+      .spyOn(fs, 'chmod')
+      .mockImplementationOnce(((targetPath, mode, callback) => callback(expected)) as any);
+    await expect(fileSystem.chmod('/missing', 0o644)).rejects.toBe(expected);
+
+    jest
+      .spyOn(fs, 'readlink')
+      .mockImplementationOnce(((targetPath, callback) => callback(expected)) as any);
+    await expect(fileSystem.readlink('/missing')).rejects.toBe(expected);
+
+    jest
+      .spyOn(fs, 'symlink')
+      .mockImplementationOnce(((targetPath, linkPath, type, callback) => callback(expected)) as any);
+    await expect(fileSystem.symlink('/target', '/link')).rejects.toBe(expected);
+
+    jest
+      .spyOn(fs, 'mkdir')
+      .mockImplementationOnce(((dirPath, callback) => callback(expected)) as any);
+    await expect(fileSystem.mkdir('/missing')).rejects.toBe(expected);
+
+    jest
+      .spyOn(fs, 'readdir')
+      .mockImplementationOnce(((dirPath, callback) => callback(expected)) as any);
+    await expect(fileSystem.list('/missing')).rejects.toBe(expected);
+
+    jest
+      .spyOn(fs, 'unlink')
+      .mockImplementationOnce(((targetPath, callback) => callback(expected)) as any);
+    await expect(fileSystem.unlink('/missing')).rejects.toBe(expected);
+
+    jest
+      .spyOn(fs, 'rmdir')
+      .mockImplementationOnce(((targetPath, callback) => callback(expected)) as any);
+    await expect(fileSystem.rmdir('/missing', false)).rejects.toBe(expected);
+  });
+
+  test('rejects put when the input stream errors after piping starts', async () => {
+    const expected = new Error('stream failed');
+    const writer = {
+      once: jest.fn(function() {
+        return this;
+      }),
+      end: jest.fn(),
+    };
+    const input = {
+      once: jest.fn(function() {
+        return this;
+      }),
+      pipe: jest.fn(),
+    };
+    jest.spyOn(fs, 'createWriteStream').mockReturnValue(writer as any);
+
+    const promise = fileSystem.put(input as any, path.join(tempDir, 'broken.txt'));
+    const errorHandler = (input.once as jest.Mock).mock.calls.find(
+      ([event]) => event === 'error'
+    )![1];
+    errorHandler(expected);
+
+    await expect(promise).rejects.toBe(expected);
+    expect(input.pipe).toHaveBeenCalledWith(writer);
+    expect(writer.end).toHaveBeenCalled();
   });
 });

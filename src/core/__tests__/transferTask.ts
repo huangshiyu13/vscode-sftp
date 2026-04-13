@@ -204,6 +204,176 @@ describe('core/transferTask', () => {
     expect(warn).toHaveBeenCalledWith('Unsupported file type (type = 4). File /workspace/project/unknown');
   });
 
+  test('falls back to the configured mode and renames temp files for non-openSsh uploads', async () => {
+    const handle = new Readable({ read() { this.push(null); } });
+    const srcFs = {
+      get: jest.fn().mockResolvedValue(handle),
+    };
+    const open: any = jest.fn();
+    open.mockResolvedValueOnce(null);
+    open.mockResolvedValueOnce('upload-fd');
+    open.mockResolvedValueOnce('upload-fd');
+    const targetFs = {
+      open,
+      fstat: jest.fn().mockRejectedValue(new Error('fstat failed')),
+      put: jest.fn().mockResolvedValue(undefined),
+      futimes: jest.fn().mockResolvedValue(undefined),
+      close: jest.fn().mockResolvedValue(undefined),
+      renameAtomic: jest.fn(),
+      unlink: jest.fn().mockRejectedValue(new Error('missing target')),
+      rename: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const task = new TransferTask(
+      {
+        fsPath: '/workspace/project/file.txt',
+        fileSystem: srcFs as any,
+      },
+      {
+        fsPath: '/remote/project/file.txt',
+        fileSystem: targetFs as any,
+      },
+      {
+        fileType: FileType.File,
+        transferDirection: TransferDirection.LOCAL_TO_REMOTE,
+        transferOption: {
+          atime: 0,
+          mtime: 0,
+          perserveTargetMode: true,
+          useTempFile: true,
+          openSsh: false,
+          fallbackMode: 0o640,
+        },
+      }
+    );
+
+    await task.run();
+
+    expect(srcFs.get).toHaveBeenCalledWith('/workspace/project/file.txt');
+    expect(targetFs.put).toHaveBeenCalledWith(handle, '/remote/project/file.txt.new', {
+      mode: 0o640,
+      fd: 'upload-fd',
+      autoClose: false,
+    });
+    expect(targetFs.unlink).toHaveBeenCalledWith('/remote/project/file.txt');
+    expect(targetFs.rename).toHaveBeenCalledWith(
+      '/remote/project/file.txt.new',
+      '/remote/project/file.txt'
+    );
+    expect(targetFs.renameAtomic).not.toHaveBeenCalled();
+  });
+
+  test('transfers a file with filePerm overriding mode', async () => {
+    const handle = new Readable({ read() { this.push(null); } });
+    const srcFs = {
+      get: jest.fn().mockResolvedValue(handle),
+    };
+    const targetFs = {
+      open: jest.fn().mockResolvedValue('upload-fd'),
+      put: jest.fn().mockResolvedValue(undefined),
+      futimes: jest.fn().mockResolvedValue(undefined),
+      close: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const task = new TransferTask(
+      {
+        fsPath: '/workspace/project/file.txt',
+        fileSystem: srcFs as any,
+      },
+      {
+        fsPath: '/remote/project/file.txt',
+        fileSystem: targetFs as any,
+      },
+      {
+        fileType: FileType.File,
+        transferDirection: TransferDirection.LOCAL_TO_REMOTE,
+        transferOption: {
+          atime: 0,
+          mtime: 0,
+          mode: 0o644,
+          filePerm: 0o755,
+          perserveTargetMode: false,
+        },
+      }
+    );
+
+    await task.run();
+
+    // filePerm is parsed as parseInt(String(filePerm), 8) = parseInt("493", 8) = 331
+    // The code does: mode = filePerm ? parseInt(String(filePerm), 8) : this._TransferOption.mode
+    expect(targetFs.put).toHaveBeenCalledWith(handle, '/remote/project/file.txt', {
+      mode: parseInt(String(0o755), 8),
+      fd: 'upload-fd',
+      autoClose: false,
+    });
+  });
+
+  test('transfers a file without atime/mtime does not call futimes', async () => {
+    const handle = new Readable({ read() { this.push(null); } });
+    const srcFs = {
+      get: jest.fn().mockResolvedValue(handle),
+    };
+    const targetFs = {
+      open: jest.fn().mockResolvedValue('upload-fd'),
+      put: jest.fn().mockResolvedValue(undefined),
+      futimes: jest.fn().mockResolvedValue(undefined),
+      close: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const task = new TransferTask(
+      {
+        fsPath: '/workspace/project/file.txt',
+        fileSystem: srcFs as any,
+      },
+      {
+        fsPath: '/remote/project/file.txt',
+        fileSystem: targetFs as any,
+      },
+      {
+        fileType: FileType.File,
+        transferDirection: TransferDirection.LOCAL_TO_REMOTE,
+        transferOption: {
+          atime: 0,
+          mtime: 0,
+          perserveTargetMode: false,
+        },
+      }
+    );
+
+    await task.run();
+
+    // No atime/mtime → futimes should not be called
+    expect(targetFs.futimes).not.toHaveBeenCalled();
+    expect(targetFs.close).toHaveBeenCalledWith('upload-fd');
+  });
+
+  test('cancel does nothing when there is no active handle', () => {
+    const task = new TransferTask(
+      {
+        fsPath: '/workspace/project/file.txt',
+        fileSystem: {} as any,
+      },
+      {
+        fsPath: '/remote/project/file.txt',
+        fileSystem: {} as any,
+      },
+      {
+        fileType: FileType.File,
+        transferDirection: TransferDirection.LOCAL_TO_REMOTE,
+        transferOption: {
+          atime: 0,
+          mtime: 0,
+          perserveTargetMode: false,
+        },
+      }
+    );
+
+    // No handle set, so cancel should be a no-op
+    task.cancel();
+    // _cancelled is not set because _handle is undefined
+    expect(task.isCancelled()).toBeFalsy();
+  });
+
   test('cancel aborts the active stream only once', () => {
     const task = new TransferTask(
       {
